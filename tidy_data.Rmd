@@ -1,5 +1,5 @@
 ---
-title: "Data Manipulation"
+title: "Tidy Data"
 output: github_document
 ---
 
@@ -7,105 +7,42 @@ output: github_document
 library(tidyverse)
 ```
 
-## Load in the FAS litters data
-```{r}
-litters_df = read_csv("./data/FAS_litters.csv")
-litters_df = janitor::clean_names(litters_df)
-```
+## `pivot_longer`
 
-
-## `seletct`
-
-Choose some columns and not others.
+Load the PULSE data
 
 ```{r}
-select(litters_df, group, gd0_weight:gd_of_birth)
+pulse_data = 
+  haven::read_sas("./data/public_pulse_data.sas7bdat") %>% 
+  janitor::clean_names()
 ```
+
+Wide format to long format ...
 
 ```{r}
-select(litters_df, -litter_number)
+pulse_data_tidy = 
+  pulse_data %>% 
+  pivot_longer(
+    bdi_score_bl:bdi_score_12m,
+    names_to = "visit",
+    names_prefix = "bdi_score_",
+    values_to = "bdi"
+  )
 ```
 
-Renaming columns ...
-
-```{r eval=FALSE}
-select(litters_df, GROUP = group, LITTer_NUmBer = litter_number)
-```
-
-```{r eval=FALSE}
-rename(litters_df, GROUP = group, LITTER_NUMBer = litte_number)
-```
-
-Select helpers
-```{r}
-select(litters_df, starts_with("gd"))
-```
+rewrite, combine, and extend (to add a mutate)
 
 ```{r}
-select(litters_df, litter_number, everything())
-```
-
-```{r}
-relocate(litters_df, litter_number)
-```
-
-## `filter`
-
-```{r}
-filter(litters_df, gd0_weight < 22)
-```
-
-```{r}
-filter(litters_df, gd_of_birth == 20)
-```
-
-```{r}
-filter(litters_df, !(gd_of_birth == 20))
-```
-
-```{r}
-filter(litters_df, gd0_weight >= 22, gd_of_birth == 20)
-```
-
-```{r}
-filter(litters_df, group == "Mod8")
-```
-
-```{r}
-filter(litters_df, group %in% c("Con7", "Mod8"))
-```
-
-## `mutate`
-
-```{r}
-mutate(
-  litters_df, 
-  wt_gain = gd18_weight - gd0_weight,
-  group = str_to_lower(group))
-```
-
-## `arrange`
-```{r}
-arrange(litters_df, pups_born_alive)
-```
-
-## `%>%`
-
-```{r}
-litters_data_row = read_csv("./data/FAS_litters.csv")
-litters_clean_name = janitor::clean_names(litters_data_row)
-litters_data_selected = select(litters_clean_name, -pups_survive)
-litters_mutated = mutate(litters_data_selected, wt_gain = gd18_weight - gd0_weight)
-litters_without_missing = drop_na(litters_mutated, gd0_weight)
-```
-
-USE THE PIPE OPERATOR INSTEAD
-```{r}
-litters_df = 
-  read_csv("./data/FAS_litters.csv") %>% 
-  janitor::clean_names() %>%
-  select(-pups_survive) %>% 
-  mutate(wt_gain = gd18_weight - gd0_weight) %>% 
-  drop_na(gd0_weight)
+pulse_data = 
+  haven::read_sas("./data/public_pulse_data.sas7bdat") %>% 
+  janitor::clean_names() %>% 
+  pivot_longer(
+    bdi_score_bl:bdi_score_12m,
+    names_to = "visit",
+    names_prefix = "bdi_score_",
+    values_to = "bdi"
+  ) %>% 
+  relocate(id, visit) %>% 
+  mutate(visit = recode(visit, "bl" = "00m"))
 ```
 
